@@ -1,4 +1,4 @@
-import { IsInt } from "class-validator";
+import { IsNumber, IsPositive } from "class-validator";
 import { UserPoint } from "../model/point.model";
 
 export class PointOutputDto implements UserPoint {
@@ -7,7 +7,8 @@ export class PointOutputDto implements UserPoint {
   updateMillis: number;
 }
 
-export class PointDto {
-  @IsInt()
+export class PointInputDto {
+  @IsPositive()
+  @IsNumber()
   amount: number;
 }

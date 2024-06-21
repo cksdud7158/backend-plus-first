@@ -7,3 +7,5 @@ export class PointDomain implements UserPoint {
     public updateMillis: number,
   ) {}
 }
+
+export type PointInsertOrUpdateType = Omit<PointDomain, "updateMillis">;

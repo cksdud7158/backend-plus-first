@@ -8,9 +8,8 @@ import {
   ValidationPipe,
 } from "@nestjs/common";
 import { PointHistory, UserPoint } from "../model/point.model";
-import { UserIdPipe } from "../pipes/UserId.pipe";
-import { PointMapper } from "../mapper/point.mapper";
-import { PointDto, PointOutputDto } from "../dto/point.dto";
+import { IdPipe } from "../pipes/UserId.pipe";
+import { PointInputDto, PointOutputDto } from "../dto/point.dto";
 import {
   IPOINT_SERVICE,
   IPointService,
@@ -31,8 +30,25 @@ export class PointController {
    * @returns 사용자의 현재 포인트
    */
   @Get(":id")
-  async point(@Param("id", UserIdPipe) id: number): Promise<PointOutputDto> {
-    return PointMapper.toOutputDto(await this.pointService.getPoint(id));
+  async point(@Param("id", IdPipe) id: number): Promise<PointOutputDto> {
+    return await this.pointService.getPoint(id);
+  }
+
+  /**
+   * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
+   */
+  /**
+   * @description 사용자 포인트 충전
+   * @param id  사용자 ID
+   * @param pointInputDto 충전할 금액
+   * @returns 사용자 현재 포인트
+   */
+  @Patch(":id/charge")
+  async charge(
+    @Param("id", IdPipe) id: number,
+    @Body(ValidationPipe) pointInputDto: PointInputDto,
+  ): Promise<PointOutputDto> {
+    return await this.pointService.charge(id, pointInputDto);
   }
 
   /**
@@ -45,28 +61,15 @@ export class PointController {
   }
 
   /**
-   * TODO - 특정 유저의 포인트를 충전하는 기능을 작성해주세요.
-   */
-  @Patch(":id/charge")
-  async charge(
-    @Param("id") id,
-    @Body(ValidationPipe) pointDto: PointDto,
-  ): Promise<UserPoint> {
-    const userId = Number.parseInt(id);
-    const amount = pointDto.amount;
-    return { id: userId, point: amount, updateMillis: Date.now() };
-  }
-
-  /**
    * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
    */
   @Patch(":id/use")
   async use(
     @Param("id") id,
-    @Body(ValidationPipe) pointDto: PointDto,
+    @Body(ValidationPipe) PointInputDto: PointInputDto,
   ): Promise<UserPoint> {
     const userId = Number.parseInt(id);
-    const amount = pointDto.amount;
+    const amount = PointInputDto.amount;
     return { id: userId, point: amount, updateMillis: Date.now() };
   }
 }

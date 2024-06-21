@@ -8,7 +8,8 @@ import { pointRepositoryProvider } from "../repository/point/point.repository.pr
 import { DatabaseModule } from "../../database/database.module";
 import { PointService } from "../service/point.service";
 import { IPOINT_SERVICE } from "../service/point.service.interface";
-import { PointOutputDto } from "../dto/point.dto";
+import { PointInputDto, PointOutputDto } from "../dto/point.dto";
+import { pointHistoryRepositoryProviders } from "../repository/pointHistory/pointHistory.repository.provider";
 
 describe("PointController", () => {
   let app: INestApplication;
@@ -29,7 +30,11 @@ describe("PointController", () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [AppModule, DatabaseModule],
       controllers: [PointController],
-      providers: [...pointServiceProvider, ...pointRepositoryProvider],
+      providers: [
+        ...pointServiceProvider,
+        ...pointRepositoryProvider,
+        ...pointHistoryRepositoryProviders,
+      ],
     }).compile();
 
     pointController = module.get(PointController);
@@ -41,14 +46,17 @@ describe("PointController", () => {
   });
 
   // 포인트 조회 테스트
-  describe("point", () => {
+  describe("/point/:id (get)", () => {
     it("포인트 조회 성공", async () => {
+      //given
       const id = 1;
       const data: PointOutputDto = { id, point: 0, updateMillis: Date.now() };
 
+      //when
       jest.spyOn(pointService, "getPoint").mockResolvedValue(data);
       const pointOutputDto = await pointController.point(id);
 
+      //then
       expect(pointOutputDto).toEqual(data);
     });
 
@@ -59,6 +67,74 @@ describe("PointController", () => {
 
     it("id 가 숫자가 아닐 경우", async () => {
       return request(app.getHttpServer()).get("/point/-1").expect(400);
+    });
+  });
+
+  // 포인트 충전 테스트
+  describe("/point/:id/charge (PATCH)", () => {
+    it("포인트를 충전 성공", async () => {
+      //given
+      const userId = 1;
+      const amount = 10;
+      const updateMillis = Date.now();
+      const pointInputDto: PointInputDto = { amount };
+      const pointOutputDto: PointOutputDto = {
+        id: userId,
+        point: amount,
+        updateMillis,
+      };
+
+      //when
+      jest.spyOn(pointService, "charge").mockResolvedValue(pointOutputDto);
+      const res = await pointController.charge(userId, pointInputDto);
+
+      //then
+      expect(res).toEqual(pointOutputDto);
+    });
+
+    it("userId가 숫자가 아닌 경우 400을 반환", async () => {
+      //given
+      const userId = "test";
+      const amount = 10;
+      const pointInputDto: PointInputDto = { amount };
+
+      //when
+      const response = await request(app.getHttpServer())
+        .patch(`/point/${userId}/charge`)
+        .send(pointInputDto);
+
+      //then
+      expect(response.status).toBe(400);
+    });
+
+    it("userId가 0보다 작은 경우 400을 반환", async () => {
+      //given
+      const userId = -1;
+      const amount = 10;
+      const pointInputDto: PointInputDto = { amount };
+
+      //when
+      const response = await request(app.getHttpServer())
+        .patch(`/point/${userId}/charge`)
+        .send(pointInputDto);
+
+      //then
+      expect(response.status).toBe(400);
+    });
+
+    it("amount가 0보다 작은 경우 400을 반환", async () => {
+      //given
+      const userId = 1;
+      const amount = -1;
+      const pointInputDto: PointInputDto = { amount };
+
+      //when
+      const response = await request(app.getHttpServer())
+        .patch(`/point/${userId}/charge`)
+        .send(pointInputDto);
+
+      //then
+      expect(response.status).toBe(400);
     });
   });
 });

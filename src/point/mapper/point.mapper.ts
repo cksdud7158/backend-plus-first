@@ -1,4 +1,4 @@
-import { PointDomain } from "../domains/point.domain";
+import { PointDomain } from "../domain/point.domain";
 import { PointOutputDto } from "../dto/point.dto";
 import { UserPoint } from "../model/point.model";
 
