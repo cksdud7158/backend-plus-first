@@ -6,14 +6,14 @@ import {
   IPointRepository,
 } from "../repository/point/point.repository.interface";
 import { PointHistory, TransactionType, UserPoint } from "../model/point.model";
-import { PointMapper } from "../mapper/point.mapper";
-import { PointDomain } from "../domain/point.domain";
 import {
   IPOINT_HISTORY_REPOSITORY,
   IPointHistoryRepository,
 } from "../repository/pointHistory/pointHistory.repository.interface";
 import { PointInputDto, PointOutputDto } from "../dto/point.dto";
 import { PointHistoryMapper } from "../mapper/pointHistory.mapper";
+import { PointMapper } from "../mapper/point.mapper";
+import { PointDomain } from "../domain/point.domain";
 
 describe("PointService", () => {
   let pointService: PointService;
@@ -216,6 +216,80 @@ describe("PointService", () => {
       const res = await pointService.use(userId, pointDto);
       // then
       expect(res).toEqual(pointOutputDto);
+    });
+  });
+
+  describe("포인트 충전/사용 동시성 테스트", () => {
+    it("포인트 충전 및 사용이 동시에 발생할 시 정상 처리되는지 테스트", async () => {
+      //given
+      const userId = 1;
+      const timeMillis = Date.now();
+
+      const pointInputDto1: PointInputDto = { amount: 200 };
+      const pointInputDto2: PointInputDto = { amount: 100 };
+      const pointInputDto3: PointInputDto = { amount: 100 };
+      const pointInputDto4: PointInputDto = { amount: 100 };
+
+      const entity: UserPoint = {
+        id: userId,
+        point: 0,
+        updateMillis: timeMillis,
+      };
+      jest.spyOn(pointRepository, "insertOrUpdate").mockResolvedValueOnce({
+        ...entity,
+        point:
+          pointInputDto1.amount -
+          pointInputDto2.amount +
+          pointInputDto3.amount -
+          pointInputDto4.amount,
+      });
+      jest.spyOn(pointRepository, "selectById").mockResolvedValueOnce({
+        ...entity,
+        point:
+          pointInputDto1.amount - pointInputDto2.amount + pointInputDto3.amount,
+      });
+      jest.spyOn(pointRepository, "insertOrUpdate").mockResolvedValueOnce({
+        ...entity,
+        point:
+          pointInputDto1.amount - pointInputDto2.amount + pointInputDto3.amount,
+      });
+      jest.spyOn(pointRepository, "selectById").mockResolvedValueOnce({
+        ...entity,
+        point: pointInputDto1.amount - pointInputDto2.amount,
+      });
+      jest.spyOn(pointRepository, "insertOrUpdate").mockResolvedValueOnce({
+        ...entity,
+        point: pointInputDto1.amount - pointInputDto2.amount,
+      });
+      jest.spyOn(pointRepository, "selectById").mockResolvedValueOnce({
+        ...entity,
+        point: pointInputDto1.amount,
+      });
+      jest.spyOn(pointRepository, "insertOrUpdate").mockResolvedValueOnce({
+        ...entity,
+        point: pointInputDto1.amount,
+      });
+      jest.spyOn(pointRepository, "selectById").mockResolvedValueOnce({
+        ...entity,
+        point: 0,
+      });
+
+      //when
+      await Promise.all([
+        pointService.charge(userId, pointInputDto1),
+        pointService.use(userId, pointInputDto2),
+        pointService.charge(userId, pointInputDto3),
+        pointService.use(userId, pointInputDto3),
+      ]);
+
+      //then
+      const res = await pointService.getPoint(userId);
+      expect(res.point).toBe(
+        pointInputDto1.amount -
+          pointInputDto2.amount +
+          pointInputDto3.amount -
+          pointInputDto4.amount,
+      );
     });
   });
 });
