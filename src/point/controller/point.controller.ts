@@ -54,26 +54,32 @@ export class PointController {
   /**
    * TODO - 특정 유저의 포인트 충전/이용 내역을 조회하는 기능을 작성해주세요.
    */
+
   /**
    * @description 사용자 포인트 충전/이용 내역 조회
    * @param id 사용자 ID
    * @returns 사용자 포인트 이력
    */
   @Get(":id/histories")
-  async history(@Param("id", IdPipe) id): Promise<PointHistory[]> {
+  async history(@Param("id", IdPipe) id: number): Promise<PointHistory[]> {
     return await this.pointService.getHistory(id);
   }
 
   /**
    * TODO - 특정 유저의 포인트를 사용하는 기능을 작성해주세요.
    */
+
+  /**
+   * @description 사용자 포인트 사용
+   * @param id 사용자 ID
+   * @param pointInputDto 차감할 금액
+   * @returns 사용자 현재 포인트
+   */
   @Patch(":id/use")
   async use(
-    @Param("id") id,
-    @Body(ValidationPipe) PointInputDto: PointInputDto,
+    @Param("id", IdPipe) id: number,
+    @Body(ValidationPipe) pointInputDto: PointInputDto,
   ): Promise<UserPoint> {
-    const userId = Number.parseInt(id);
-    const amount = PointInputDto.amount;
-    return { id: userId, point: amount, updateMillis: Date.now() };
+    return await this.pointService.use(id, pointInputDto);
   }
 }

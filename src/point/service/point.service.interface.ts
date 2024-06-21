@@ -9,4 +9,6 @@ export interface IPointService {
   charge(userId: number, PointInputDto: PointInputDto): Promise<PointOutputDto>;
 
   getHistory(userId: number): Promise<PointHistoryOutputDto[]>;
+
+  use(userId: number, pointDto: PointInputDto): Promise<PointOutputDto>;
 }

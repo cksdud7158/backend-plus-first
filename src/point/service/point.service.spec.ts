@@ -12,7 +12,7 @@ import {
   IPOINT_HISTORY_REPOSITORY,
   IPointHistoryRepository,
 } from "../repository/pointHistory/pointHistory.repository.interface";
-import { PointOutputDto } from "../dto/point.dto";
+import { PointInputDto, PointOutputDto } from "../dto/point.dto";
 import { PointHistoryMapper } from "../mapper/pointHistory.mapper";
 
 describe("PointService", () => {
@@ -187,6 +187,35 @@ describe("PointService", () => {
 
       // then
       expect(result).toEqual(pointHistoryDomains);
+    });
+  });
+
+  describe("포인트 사용 테스트(use)", () => {
+    it("포인트 차감 성공 테스트", async () => {
+      // given
+      const userId = 1;
+      const point = 100;
+      const pointDto: PointInputDto = { amount: point };
+      const timeMillis = Date.now();
+
+      const userPoint: UserPoint = {
+        id: 1,
+        point,
+        updateMillis: timeMillis,
+      };
+      const pointOutputDto: PointOutputDto = {
+        id: userId,
+        point: 50,
+        updateMillis: timeMillis,
+      };
+
+      pointRepository.selectById.mockResolvedValueOnce(userPoint);
+      pointRepository.insertOrUpdate.mockResolvedValueOnce(pointOutputDto);
+
+      // when
+      const res = await pointService.use(userId, pointDto);
+      // then
+      expect(res).toEqual(pointOutputDto);
     });
   });
 });
