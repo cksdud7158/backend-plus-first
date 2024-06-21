@@ -15,6 +15,8 @@ import {
   IPOINT_HISTORY_REPOSITORY,
   IPointHistoryRepository,
 } from "../repository/pointHistory/pointHistory.repository.interface";
+import { PointHistoryOutputDto } from "../dto/pointHistory.dto";
+import { PointHistoryMapper } from "../mapper/pointHistory.mapper";
 
 @Injectable()
 export class PointService implements IPointService {
@@ -25,9 +27,9 @@ export class PointService implements IPointService {
     private readonly pointHistoryRepository: IPointHistoryRepository,
   ) {}
 
-  async getPoint(id: number): Promise<UserPoint> {
+  async getPoint(userId: number): Promise<UserPoint> {
     // 사용자 포인트 조회
-    const pointEntity = await this.userPointRepository.selectById(id);
+    const pointEntity = await this.userPointRepository.selectById(userId);
 
     if (!pointEntity.id) {
       throw new InternalServerErrorException();
@@ -38,37 +40,43 @@ export class PointService implements IPointService {
     return PointMapper.toOutputDto(userPointDomain);
   }
 
-  async charge(id: number, { amount }: PointInputDto): Promise<PointOutputDto> {
+  async charge(
+    userId: number,
+    { amount }: PointInputDto,
+  ): Promise<PointOutputDto> {
     // history 추가
-    const pointHistory = await this.pointHistoryRepository.insert({
-      userId: id,
+    await this.pointHistoryRepository.insert({
+      userId: userId,
       amount,
       type: TransactionType.CHARGE,
       timeMillis: Date.now(),
     });
 
-    if (!pointHistory || !pointHistory.id) {
-      throw new InternalServerErrorException();
-    }
-
     // 기존 포인트 조회
-    let pointEntity = await this.userPointRepository.selectById(id);
-
-    if (!pointEntity || !pointEntity.id) {
-      throw new InternalServerErrorException();
-    }
+    let pointEntity = await this.userPointRepository.selectById(userId);
 
     // 기존 유저 없으면 point 0으로 리턴됨
     pointEntity = await this.userPointRepository.insertOrUpdate({
-      id,
+      id: userId,
       point: pointEntity.point + amount,
     });
 
-    if (!pointEntity || !pointEntity.id) {
-      throw new InternalServerErrorException();
-    }
-
     const userPointDomain = PointMapper.toDomain(pointEntity);
     return PointMapper.toOutputDto(userPointDomain);
+  }
+
+  async getHistory(userId: number): Promise<PointHistoryOutputDto[]> {
+    // 포인트 이력 조회
+    const pointHistoryEntities =
+      await this.pointHistoryRepository.selectAllByUserId(userId);
+
+    const pointHistoryDomains = pointHistoryEntities.map((entity) =>
+      PointHistoryMapper.toDomain(entity),
+    );
+
+    // DTO 변환 후 반환
+    return pointHistoryDomains.map((domain) =>
+      PointHistoryMapper.toDto(domain),
+    );
   }
 }

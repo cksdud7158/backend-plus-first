@@ -16,4 +16,8 @@ export class PointHistoryRepository implements IPointHistoryRepository {
       data.timeMillis,
     );
   }
+
+  selectAllByUserId(userId: number): Promise<PointHistory[]> {
+    return this.pointHistoryModel.selectAllByUserId(userId);
+  }
 }

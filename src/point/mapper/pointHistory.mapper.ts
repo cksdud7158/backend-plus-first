@@ -5,7 +5,7 @@ import { PointHistoryOutputDto } from "../dto/pointHistory.dto";
 
 @Injectable()
 export class PointHistoryMapper {
-  toDomain(entity: PointHistory): PointHistoryDomain {
+  static toDomain(entity: PointHistory): PointHistoryDomain {
     return new PointHistoryDomain(
       entity.id,
       entity.userId,
@@ -15,7 +15,7 @@ export class PointHistoryMapper {
     );
   }
 
-  toDto(domain: PointHistoryDomain): PointHistoryOutputDto {
+  static toDto(domain: PointHistoryDomain): PointHistoryOutputDto {
     return {
       id: domain.id,
       userId: domain.userId,

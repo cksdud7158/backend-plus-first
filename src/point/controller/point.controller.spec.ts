@@ -10,6 +10,8 @@ import { PointService } from "../service/point.service";
 import { IPOINT_SERVICE } from "../service/point.service.interface";
 import { PointInputDto, PointOutputDto } from "../dto/point.dto";
 import { pointHistoryRepositoryProviders } from "../repository/pointHistory/pointHistory.repository.provider";
+import { PointHistoryOutputDto } from "../dto/pointHistory.dto";
+import { TransactionType } from "../model/point.model";
 
 describe("PointController", () => {
   let app: INestApplication;
@@ -132,6 +134,57 @@ describe("PointController", () => {
       const response = await request(app.getHttpServer())
         .patch(`/point/${userId}/charge`)
         .send(pointInputDto);
+
+      //then
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe("/point/:id/histories (GET)", () => {
+    it("포인트 이력 정상 조회", async () => {
+      //given
+      const userId = 1;
+      const timeMillis = Date.now();
+
+      const pointHistoryOutputDto: PointHistoryOutputDto = {
+        id: 1,
+        amount: 10,
+        userId,
+        type: TransactionType.CHARGE,
+        timeMillis,
+      };
+
+      //when
+      jest
+        .spyOn(pointService, "getHistory")
+        .mockResolvedValue([pointHistoryOutputDto]);
+      const res = await pointController.history(userId);
+
+      //then
+      expect(res).toEqual([pointHistoryOutputDto]);
+    });
+
+    it("userId가 숫자가 아닌 경우 400을 반환", async () => {
+      //given
+      const userId = "test";
+
+      //when
+      const response = await request(app.getHttpServer()).get(
+        `/point/${userId}/histories`,
+      );
+
+      //then
+      expect(response.status).toBe(400);
+    });
+
+    it("userId가 0보다 작은 경우 400을 반환", async () => {
+      //given
+      const userId = -1;
+
+      //when
+      const response = await request(app.getHttpServer()).get(
+        `/point/${userId}/histories`,
+      );
 
       //then
       expect(response.status).toBe(400);

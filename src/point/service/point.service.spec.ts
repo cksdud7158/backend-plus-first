@@ -13,7 +13,7 @@ import {
   IPointHistoryRepository,
 } from "../repository/pointHistory/pointHistory.repository.interface";
 import { PointOutputDto } from "../dto/point.dto";
-import { InternalServerErrorException } from "@nestjs/common";
+import { PointHistoryMapper } from "../mapper/pointHistory.mapper";
 
 describe("PointService", () => {
   let pointService: PointService;
@@ -46,6 +46,7 @@ describe("PointService", () => {
           provide: IPOINT_HISTORY_REPOSITORY,
           useValue: {
             insert: jest.fn(),
+            selectAllByUserId: jest.fn(),
           },
         },
       ],
@@ -158,65 +159,34 @@ describe("PointService", () => {
       // then
       expect(result).toEqual(pointOutputDto);
     });
+  });
 
-    it("history 저장 실패 시 500 반환", async () => {
+  describe("포인트 이력 조회 테스트(getHistory)", () => {
+    it("포인트 이력 조회 성공", async () => {
+      // given
       const userId = 1;
-      const amount = 10;
-      pointHistoryRepository.insert.mockResolvedValueOnce(null);
-
-      await expect(pointService.charge(userId, { amount })).rejects.toEqual(
-        new InternalServerErrorException(),
+      const pointHistories: PointHistory[] = [
+        {
+          id: 1,
+          userId,
+          amount: 10,
+          type: TransactionType.CHARGE,
+          timeMillis: Date.now(),
+        },
+      ];
+      const pointHistoryDomains = pointHistories.map((history) =>
+        PointHistoryMapper.toDomain(history),
       );
-    });
 
-    it("기존 포인트 조회 실패 시 500 반환", async () => {
-      const userId = 1;
-      const amount = 10;
-      const updateMillis = Date.now();
-
-      const pointHistory: PointHistory = {
-        id: 1,
-        userId,
-        amount,
-        type: TransactionType.CHARGE,
-        timeMillis: updateMillis,
-      };
-      pointHistoryRepository.insert.mockResolvedValueOnce(pointHistory);
-      pointRepository.selectById.mockResolvedValueOnce(null);
-
-      await expect(pointService.charge(userId, { amount })).rejects.toEqual(
-        new InternalServerErrorException(),
+      pointHistoryRepository.selectAllByUserId.mockResolvedValueOnce(
+        pointHistories,
       );
-    });
 
-    it("포인트 충전 실패 시 500 반환", async () => {
-      const userId = 1;
-      const amount = 10;
-      const updateMillis = Date.now();
+      // when
+      const result = await pointService.getHistory(userId);
 
-      const pointHistory: PointHistory = {
-        id: 1,
-        userId,
-        amount,
-        type: TransactionType.CHARGE,
-        timeMillis: updateMillis,
-      };
-
-      const userPoint: UserPoint = {
-        id: 1,
-        point: amount,
-        updateMillis: updateMillis,
-      };
-
-      const userOriginPoint: UserPoint = { ...userPoint, point: 100 };
-
-      pointHistoryRepository.insert.mockResolvedValueOnce(pointHistory);
-      pointRepository.selectById.mockResolvedValueOnce(userOriginPoint);
-      pointRepository.insertOrUpdate.mockResolvedValueOnce(null);
-
-      await expect(pointService.charge(userId, { amount })).rejects.toEqual(
-        new InternalServerErrorException(),
-      );
+      // then
+      expect(result).toEqual(pointHistoryDomains);
     });
   });
 });
